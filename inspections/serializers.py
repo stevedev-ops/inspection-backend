@@ -44,12 +44,18 @@ class SystemActivityLogSerializer(serializers.ModelSerializer):
     def get_user_name(self, obj):
         if not obj.user_id:
             return 'System'
+            
+        # Optimization: Try to get from pre-fetched context map first
+        user_names = self.context.get('user_names', {})
+        uid_str = str(obj.user_id)
+        if uid_str in user_names:
+            return user_names[uid_str]
+
         try:
             from users.models import User
             user = User.objects.get(id=obj.user_id)
             return user.full_name or user.username
         except:
-            uid_str = str(obj.user_id) if obj.user_id else "Unknown"
             return f"User({uid_str[:8]})"
 
 class ClientErrorLogSerializer(serializers.ModelSerializer):

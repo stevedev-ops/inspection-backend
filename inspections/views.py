@@ -14,7 +14,8 @@ class BusinessViewSet(viewsets.ModelViewSet):
         user = self.request.user
         qs = Business.objects.all()
         if user.role in ('pho', 'nccg_inspector') and user.subcounty:
-            qs = qs.filter(subcounty_name=user.subcounty)
+            # Use iexact for case-insensitive lockdown
+            qs = qs.filter(subcounty_name__iexact=user.subcounty)
         return qs
 
 import django_filters
@@ -141,9 +142,31 @@ class ReportVerificationLogViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
 class SystemActivityLogViewSet(viewsets.ModelViewSet):
-    queryset = SystemActivityLog.objects.all()
+    queryset = SystemActivityLog.objects.all().order_by('-created_at')
     serializer_class = SystemActivityLogSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        # Optimization: Batch fetch related user names for the current page
+        # This prevents 100+ separate queries per page load
+        logs = self.get_queryset()
+        # Use pagination bounds if available
+        try:
+            page = self.paginate_queryset(logs)
+            target_logs = page if page is not None else logs
+        except:
+            target_logs = logs
+
+        uids = {log.user_id for log in target_logs if log.user_id}
+        if uids:
+            from users.models import User
+            users_map = {
+                str(u.id): u.full_name or u.username 
+                for u in User.objects.filter(id__in=uids)
+            }
+            context['user_names'] = users_map
+        return context
 
 class ClientErrorLogViewSet(viewsets.ModelViewSet):
     queryset = ClientErrorLog.objects.all()

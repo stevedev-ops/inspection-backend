@@ -4,10 +4,10 @@ import uuid
 
 class Business(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    business_name = models.CharField(max_length=255)
-    permit_no = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    business_name = models.CharField(max_length=255, db_index=True)
+    permit_no = models.CharField(max_length=100, unique=True, null=True, blank=True, db_index=True)
     county_name = models.CharField(max_length=100, null=True, blank=True)
-    subcounty_name = models.CharField(max_length=100, null=True, blank=True)
+    subcounty_name = models.CharField(max_length=100, null=True, blank=True, db_index=True)
     ward_name = models.CharField(max_length=100, null=True, blank=True)
     building_name = models.CharField(max_length=255, null=True, blank=True)
     street_name = models.CharField(max_length=255, null=True, blank=True)
@@ -29,6 +29,11 @@ class Business(models.Model):
     location_lng = models.FloatField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['business_name', 'subcounty_name']),
+        ]
 
     def __str__(self):
         return self.business_name
