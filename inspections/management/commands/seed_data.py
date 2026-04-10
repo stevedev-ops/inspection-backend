@@ -40,7 +40,7 @@ class Command(BaseCommand):
 
         self.stdout.write("Loading SIMPLIFIED DATA.xlsx for businesses...")
         
-        file_path = '../data/SIMPLIFIED DATA.xlsx'
+        file_path = 'data/SIMPLIFIED DATA.xlsx'
         try:
             df = pd.read_excel(file_path)
         except Exception as e:
