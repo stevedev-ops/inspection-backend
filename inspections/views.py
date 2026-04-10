@@ -12,11 +12,18 @@ class BusinessViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        qs = Business.objects.all()
-        if user.role in ('pho', 'nccg_inspector') and user.subcounty:
-            # Use iexact for case-insensitive lockdown
-            qs = qs.filter(subcounty_name__iexact=user.subcounty)
-        return qs
+        # Admins and Super Admins see everything
+        if user.role in ('super_admin', 'finance_manager'):
+            return Business.objects.all()
+            
+        if user.role in ('pho', 'nccg_inspector'):
+            if not user.subcounty:
+                # Security: If no subcounty set, they see NOTHING
+                return Business.objects.none()
+            return Business.objects.filter(subcounty_name__iexact=user.subcounty)
+            
+        # Default fallback for other roles: see nothing by default for security
+        return Business.objects.none()
 
 import django_filters
 from django.db.models import Q
