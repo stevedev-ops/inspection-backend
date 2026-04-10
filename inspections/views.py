@@ -17,13 +17,28 @@ class BusinessViewSet(viewsets.ModelViewSet):
             return Business.objects.all()
             
         if user.role in ('pho', 'nccg_inspector'):
-            if not user.subcounty:
+            subcounty = (user.subcounty or '').strip()
+            if not subcounty:
                 # Security: If no subcounty set, they see NOTHING
                 return Business.objects.none()
-            return Business.objects.filter(subcounty_name__iexact=user.subcounty)
-            
+            return Business.objects.filter(subcounty_name__iexact=subcounty)
+
         # Default fallback for other roles: see nothing by default for security
         return Business.objects.none()
+
+    @action(detail=False, methods=['GET'], permission_classes=[permissions.IsAuthenticated], url_path='debug-subcounties')
+    def debug_subcounties(self, request):
+        """Returns distinct subcounty_name values stored in Business table. Admin only."""
+        if request.user.role not in ('super_admin', 'admin'):
+            return Response({'error': 'Forbidden'}, status=status.HTTP_403_FORBIDDEN)
+        values = list(
+            Business.objects.exclude(subcounty_name__isnull=True)
+            .exclude(subcounty_name='')
+            .values_list('subcounty_name', flat=True)
+            .distinct()
+            .order_by('subcounty_name')
+        )
+        return Response({'stored_subcounties': values, 'count': len(values)})
 
 import django_filters
 from django.db.models import Q
